@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reports   Report[]
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  url       String
+  urlHash   String
+  status    String   @default("PENDING")
+  errorMsg  String?
+
+  seoScore  Int?
+  geoScore  Int?
+
+  crawlData     String?
+  seoIssues     String?
+  geoIssues     String?
+  optimizations String?
+
+  startedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([urlHash, userId])
+  @@index([createdAt])
+  @@index([status, startedAt])
+}
