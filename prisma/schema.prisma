@@ -15,6 +15,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   reports   Report[]
+  experts   Expert[]
 }
 
 model Report {
@@ -43,4 +44,45 @@ model Report {
   @@index([urlHash, userId])
   @@index([createdAt])
   @@index([status, startedAt])
+}
+
+model Expert {
+  id             String   @id @default(cuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id])
+  name           String
+  avatar         String?
+  title          String                // 头衔，如 "资深 GEO 顾问"
+  bio            String                // 简介
+  specialties    String                // JSON string: string[] 擅长领域
+  contactType    String                // "wechat" | "email" | "telegram"
+  contactValue   String                // 联系方式
+  priceMin       Int                   // 最低报价（元）
+  priceMax       Int                   // 最高报价（元）
+  priceUnit      String   @default("次") // "次" | "小时" | "项目"
+  totalOrders    Int      @default(0)
+  completedOrders Int     @default(0)
+  avgRating      Float    @default(5.0)  // 1.0-5.0
+  avgResponseTime String  @default("2小时内") // 平均响应时间
+  badge          String   @default("new") // "verified" | "senior" | "new"
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  reviews        ExpertReview[]
+
+  @@index([isActive])
+  @@index([avgRating])
+}
+
+model ExpertReview {
+  id        String   @id @default(cuid())
+  expertId  String
+  expert    Expert   @relation(fields: [expertId], references: [id])
+  authorName String  // 评价者名称
+  rating    Int      // 1-5
+  content   String   // 评价内容
+  service   String?  // 服务类型
+  createdAt DateTime @default(now())
+
+  @@index([expertId])
 }

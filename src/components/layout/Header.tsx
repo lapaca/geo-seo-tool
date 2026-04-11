@@ -13,6 +13,9 @@ export function Header() {
           GEO+SEO
         </Link>
         <nav className="flex items-center gap-4">
+          <Link href="/experts" className="text-sm text-gray-600 hover:text-gray-900">
+            GEO 专家
+          </Link>
           {session ? (
             <>
               <Link href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">

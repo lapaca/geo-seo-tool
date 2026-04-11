@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Search, Zap, Shield, BarChart3 } from 'lucide-react'
+import Link from 'next/link'
+import { Search, Zap, Shield, BarChart3, Users } from 'lucide-react'
 
 export default function HomePage() {
   const { data: session } = useSession()
@@ -114,6 +115,28 @@ export default function HomePage() {
             <p className="mt-1 text-sm text-gray-500">{desc}</p>
           </div>
         ))}
+      </div>
+
+      {/* GEO 人类专家入口 */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 px-4 py-16">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg">
+            <Users className="h-7 w-7 text-white" />
+          </div>
+          <h2 className="mt-4 text-2xl font-bold text-gray-900">GEO 人类专家</h2>
+          <p className="mt-2 text-gray-600">
+            AI 分析不够？找资深 GEO/SEO 专家一对一解决问题。
+            <br />
+            官方认证专家、透明报价、历史评价一目了然。
+          </p>
+          <Link
+            href="/experts"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-blue-200 hover:shadow-xl transition"
+          >
+            <Users className="h-4 w-4" />
+            浏览专家列表
+          </Link>
+        </div>
       </div>
     </div>
   )

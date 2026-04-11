@@ -233,3 +233,51 @@ export interface ReportListItem {
   geoScore: number | null
   createdAt: string
 }
+
+// ==================== 专家系统 ====================
+export type ExpertBadge = 'verified' | 'senior' | 'new'
+export type ContactType = 'wechat' | 'email' | 'telegram'
+
+export interface Expert {
+  id: string
+  name: string
+  avatar: string | null
+  title: string
+  bio: string
+  specialties: string[]
+  contactType: ContactType
+  contactValue: string
+  priceMin: number
+  priceMax: number
+  priceUnit: string
+  totalOrders: number
+  completedOrders: number
+  avgRating: number
+  avgResponseTime: string
+  badge: ExpertBadge
+  isActive: boolean
+  reviewCount?: number
+  createdAt: string
+}
+
+export interface ExpertReview {
+  id: string
+  expertId: string
+  authorName: string
+  rating: number
+  content: string
+  service: string | null
+  createdAt: string
+}
+
+export interface ExpertRegisterRequest {
+  name: string
+  title: string
+  bio: string
+  specialties: string[]
+  contactType: ContactType
+  contactValue: string
+  priceMin: number
+  priceMax: number
+  priceUnit?: string
+}
