@@ -6,11 +6,13 @@ import { CrawlerService } from '@/services/crawler'
 import { SeoAnalyzer } from '@/services/seo-analyzer'
 import { GeoAnalyzer } from '@/services/geo-analyzer'
 import { AiOptimizer } from '@/services/ai-optimizer'
+import { AdvancedAnalyzer } from '@/services/advanced-analyzer'
 
 const crawler = new CrawlerService()
 const seoAnalyzer = new SeoAnalyzer()
 const geoAnalyzer = new GeoAnalyzer()
 const aiOptimizer = new AiOptimizer()
+const advancedAnalyzer = new AdvancedAnalyzer()
 
 /**
  * Background analysis pipeline.
@@ -54,6 +56,11 @@ async function runAnalysis(reportId: string, url: string) {
     })
     const geoScore = geoAnalyzer.recalculateFullScore(finalGeoIssues)
 
+    // Advanced metrics
+    const advancedMetrics = advancedAnalyzer.analyze(
+      crawlData, seoResult.issues, finalGeoIssues, seoResult.score, geoScore
+    )
+
     // COMPLETED
     await prisma.report.update({
       where: { id: reportId },
@@ -65,6 +72,7 @@ async function runAnalysis(reportId: string, url: string) {
         seoIssues: JSON.stringify(seoResult.issues),
         geoIssues: JSON.stringify(finalGeoIssues),
         optimizations: JSON.stringify(aiResult.optimizations),
+        advancedMetrics: JSON.stringify(advancedMetrics),
       },
     })
   } catch (error: unknown) {

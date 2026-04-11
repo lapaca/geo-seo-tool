@@ -29,10 +29,11 @@ model Report {
   seoScore  Int?
   geoScore  Int?
 
-  crawlData     String?
-  seoIssues     String?
-  geoIssues     String?
-  optimizations String?
+  crawlData        String?
+  seoIssues        String?
+  geoIssues        String?
+  optimizations    String?
+  advancedMetrics  String?
 
   startedAt DateTime?
   createdAt DateTime  @default(now())

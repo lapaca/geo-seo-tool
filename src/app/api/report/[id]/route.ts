@@ -32,6 +32,7 @@ export async function GET(
     seoIssues: report.seoIssues ? JSON.parse(report.seoIssues) : [],
     geoIssues: report.geoIssues ? JSON.parse(report.geoIssues) : [],
     optimizations: report.optimizations ? JSON.parse(report.optimizations) : [],
+    advancedMetrics: report.advancedMetrics ? JSON.parse(report.advancedMetrics) : null,
     createdAt: report.createdAt.toISOString(),
   })
 }
