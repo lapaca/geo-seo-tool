@@ -1,28 +1,50 @@
 import * as cheerio from 'cheerio'
 import type { CrawlData, JsonLdItem } from '@/types'
+import { validateUrl } from '@/lib/url-validator'
 
 const MAX_BODY_TEXT = 5000
 const FETCH_TIMEOUT = 15000
+const MAX_REDIRECTS = 5
 
 export class CrawlerService {
   async crawl(url: string): Promise<CrawlData> {
     const start = Date.now()
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
 
-    let response: Response
-    try {
-      response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'GeoSeoBot/1.0 (+https://geo-seo-tool.com)',
-          Accept: 'text/html,application/xhtml+xml',
-        },
-        redirect: 'follow',
-      })
-    } finally {
-      clearTimeout(timer)
+    // Follow redirects manually to validate each hop against SSRF
+    let currentUrl = url
+    let response: Response | null = null
+    for (let i = 0; i <= MAX_REDIRECTS; i++) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
+      try {
+        response = await fetch(currentUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'GeoSeoBot/1.0 (+https://geo-seo-tool.com)',
+            Accept: 'text/html,application/xhtml+xml',
+          },
+          redirect: 'manual',
+        })
+      } finally {
+        clearTimeout(timer)
+      }
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location')
+        if (!location) break
+        const nextUrl = new URL(location, currentUrl).toString()
+        // Validate redirect target against SSRF
+        const validation = await validateUrl(nextUrl)
+        if (!validation.valid) {
+          throw new Error(`重定向目标被阻止: ${validation.error}`)
+        }
+        currentUrl = nextUrl
+        continue
+      }
+      break
     }
+
+    if (!response) throw new Error('请求失败')
 
     const html = await response.text()
     const loadTimeMs = Date.now() - start
@@ -147,13 +169,12 @@ export class CrawlerService {
   }
 
   private extractBodyText($: cheerio.CheerioAPI): string {
-    // Remove noise elements
-    $('script, style, nav, footer, header, aside, noscript, iframe, svg').remove()
+    // Clone to avoid mutating the shared DOM
+    const $clone = cheerio.load($.html() || '')
+    $clone('script, style, nav, footer, header, aside, noscript, iframe, svg').remove()
 
-    let text = $('body').text() || ''
-    // Collapse whitespace
+    let text = $clone('body').text() || ''
     text = text.replace(/\s+/g, ' ').trim()
-    // Truncate
     if (text.length > MAX_BODY_TEXT) {
       text = text.slice(0, MAX_BODY_TEXT)
     }

@@ -38,6 +38,7 @@ model Report {
   advancedMetrics  String?
 
   startedAt DateTime?
+  completedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

@@ -1,4 +1,6 @@
 import { lookup } from 'dns/promises'
+import { createHash } from 'crypto'
+import { isIPv4, isIPv6 } from 'net'
 
 const BLOCKED_HOSTNAMES = new Set([
   'localhost',
@@ -6,30 +8,54 @@ const BLOCKED_HOSTNAMES = new Set([
   '0.0.0.0',
   '::1',
   '[::1]',
+  'metadata.google.internal',
 ])
 
-function isPrivateIP(ip: string): boolean {
-  // IPv4 private ranges
-  if (ip.startsWith('10.')) return true
-  if (ip.startsWith('192.168.')) return true
-  if (ip.startsWith('127.')) return true
-  if (ip === '0.0.0.0') return true
+function ipToLong(ip: string): number {
+  const parts = ip.split('.').map(Number)
+  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0
+}
 
-  // 172.16.0.0 - 172.31.255.255
-  if (ip.startsWith('172.')) {
-    const second = parseInt(ip.split('.')[1], 10)
-    if (second >= 16 && second <= 31) return true
-  }
+function isPrivateIPv4(ip: string): boolean {
+  if (!isIPv4(ip)) return false
+  const num = ipToLong(ip)
 
-  // Link-local
-  if (ip.startsWith('169.254.')) return true
-
-  // IPv6 local
-  if (ip === '::1' || ip.startsWith('fe80:') || ip.startsWith('fc00:') || ip.startsWith('fd00:')) {
-    return true
-  }
+  // 0.0.0.0/8
+  if ((num >>> 24) === 0) return true
+  // 10.0.0.0/8
+  if ((num >>> 24) === 10) return true
+  // 100.64.0.0/10 (CGNAT)
+  if ((num >>> 22) === (100 << 2 | 1)) return true
+  // 127.0.0.0/8
+  if ((num >>> 24) === 127) return true
+  // 169.254.0.0/16 (link-local)
+  if ((num >>> 16) === (169 << 8 | 254)) return true
+  // 172.16.0.0/12
+  if ((num >>> 20) === (172 << 4 | 1)) return true
+  // 192.168.0.0/16
+  if ((num >>> 16) === (192 << 8 | 168)) return true
+  // 198.18.0.0/15 (benchmark)
+  if ((num >>> 17) === (198 << 7 | 0b0001001)) return true
 
   return false
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  if (!isIPv6(ip)) return false
+  const normalized = ip.toLowerCase()
+  if (normalized === '::1') return true
+  if (normalized.startsWith('fe80:')) return true   // link-local
+  if (normalized.startsWith('fc00:') || normalized.startsWith('fd00:')) return true // ULA
+  // IPv4-mapped IPv6: ::ffff:x.x.x.x
+  if (normalized.startsWith('::ffff:')) {
+    const v4part = normalized.slice(7)
+    if (isIPv4(v4part)) return isPrivateIPv4(v4part)
+  }
+  return false
+}
+
+function isPrivateIP(ip: string): boolean {
+  return isPrivateIPv4(ip) || isPrivateIPv6(ip)
 }
 
 export async function validateUrl(url: string): Promise<{ valid: boolean; error?: string }> {
@@ -46,8 +72,16 @@ export async function validateUrl(url: string): Promise<{ valid: boolean; error?
 
   const hostname = parsed.hostname.replace(/^\[|\]$/g, '')
 
-  if (BLOCKED_HOSTNAMES.has(hostname)) {
+  if (BLOCKED_HOSTNAMES.has(hostname.toLowerCase())) {
     return { valid: false, error: '不允许访问本地地址' }
+  }
+
+  // Block direct IP addresses (hex/octal/decimal encoding bypass)
+  // If hostname parses as IP, validate directly
+  if (isIPv4(hostname) || isIPv6(hostname)) {
+    if (isPrivateIP(hostname)) {
+      return { valid: false, error: '不允许访问内网地址' }
+    }
   }
 
   // Port restriction
@@ -56,7 +90,7 @@ export async function validateUrl(url: string): Promise<{ valid: boolean; error?
     return { valid: false, error: '仅支持 80/443 端口' }
   }
 
-  // DNS resolve and check resolved IP
+  // DNS resolve and check ALL resolved IPs
   try {
     const result = await lookup(hostname, { all: true })
     for (const entry of result) {
@@ -73,17 +107,16 @@ export async function validateUrl(url: string): Promise<{ valid: boolean; error?
 
 export function normalizeUrl(url: string): string {
   const parsed = new URL(url)
+  // Only lowercase hostname, preserve path case
+  parsed.hostname = parsed.hostname.toLowerCase()
   parsed.hash = ''
-  // Remove common tracking params
   const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid']
   trackingParams.forEach((p) => parsed.searchParams.delete(p))
   let normalized = parsed.toString()
-  // Remove trailing slash
   if (normalized.endsWith('/')) normalized = normalized.slice(0, -1)
-  return normalized.toLowerCase()
+  return normalized
 }
 
 export function hashUrl(url: string): string {
-  const crypto = require('crypto')
-  return crypto.createHash('sha256').update(normalizeUrl(url)).digest('hex')
+  return createHash('sha256').update(normalizeUrl(url)).digest('hex')
 }

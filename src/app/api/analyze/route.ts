@@ -66,6 +66,7 @@ async function runAnalysis(reportId: string, url: string) {
       where: { id: reportId },
       data: {
         status: 'COMPLETED',
+        completedAt: new Date(),
         seoScore: seoResult.score,
         geoScore: geoScore,
         crawlData: JSON.stringify(crawlData),
@@ -93,7 +94,14 @@ export async function POST(req: Request) {
     })
   }
 
-  const { url } = await req.json()
+  let body: { url?: string }
+  try { body = await req.json() } catch {
+    return new Response(JSON.stringify({ error: '请求体格式错误' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { url } = body
   if (!url) {
     return new Response(JSON.stringify({ error: 'URL 必填' }), {
       status: 400,
@@ -112,6 +120,19 @@ export async function POST(req: Request) {
 
   const userId = (session.user as Record<string, string>).id
   const urlHashValue = hashUrl(url)
+
+  // Rate limit: max 3 concurrent in-progress analyses per user
+  const inProgress = await prisma.report.count({
+    where: {
+      userId,
+      status: { notIn: ['COMPLETED', 'FAILED'] },
+    },
+  })
+  if (inProgress >= 3) {
+    return new Response(JSON.stringify({ error: '您有正在进行的分析，请等待完成后再试' }), {
+      status: 429, headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   // Check cache: same user + same URL + completed within 24h
   const cached = await prisma.report.findFirst({
@@ -137,7 +158,7 @@ export async function POST(req: Request) {
   })
 
   // Fire-and-forget: start analysis in background
-  runAnalysis(report.id, url)
+  runAnalysis(report.id, url).catch(() => {})
 
   // Return reportId immediately
   return new Response(

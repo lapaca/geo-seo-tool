@@ -161,9 +161,12 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             </div>
           </div>
           {report.status === 'COMPLETED' && (
-            <button className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
+            <button
+              onClick={() => setActiveTab('optimizations')}
+              className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
+            >
               <Download className="h-3.5 w-3.5" />
-              Export Full Report
+              导出优化内容
             </button>
           )}
         </div>
