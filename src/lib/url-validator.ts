@@ -34,8 +34,8 @@ function isPrivateIPv4(ip: string): boolean {
   if ((num >>> 20) === (172 << 4 | 1)) return true
   // 192.168.0.0/16
   if ((num >>> 16) === (192 << 8 | 168)) return true
-  // 198.18.0.0/15 (benchmark)
-  if ((num >>> 17) === (198 << 7 | 0b0001001)) return true
+  // NOTE: 198.18.0.0/15 (benchmark) is NOT blocked — proxy tools (Surge/Clash)
+  // resolve all domains to this range as virtual IPs
 
   return false
 }
