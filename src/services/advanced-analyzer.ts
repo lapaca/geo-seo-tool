@@ -115,20 +115,20 @@ export class AdvancedAnalyzer {
   }
 
   private analyzeTechnical(data: CrawlData): AdvancedMetrics['technical'] {
-    const bodyText = data.bodyText.toLowerCase()
+    const counts = data.domCounts
     return {
-      hasHreflang: false, // would need meta parsing
+      hasHreflang: false,
       hasAmpVersion: false,
       hasPWA: false,
       hasServiceWorker: false,
       hasWebManifest: false,
-      cssFileCount: 0,
-      jsFileCount: 0,
-      inlineStyleCount: 0,
-      inlineScriptCount: 0,
+      cssFileCount: counts.cssFiles,
+      jsFileCount: counts.jsFiles,
+      inlineStyleCount: counts.inlineStyles,
+      inlineScriptCount: counts.inlineScripts,
       deprecatedTagCount: 0,
-      iframeCount: bodyText.includes('iframe') ? 1 : 0,
-      formCount: bodyText.includes('form') ? 1 : 0,
+      iframeCount: counts.iframes,
+      formCount: counts.forms,
     }
   }
 
@@ -267,6 +267,7 @@ export class AdvancedAnalyzer {
   }
 
   private estimateResourceCount(data: CrawlData): number {
-    return data.images.length + 2 // +2 for CSS/JS minimum
+    const counts = data.domCounts
+    return data.images.length + counts.cssFiles + counts.jsFiles
   }
 }

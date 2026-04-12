@@ -7,12 +7,22 @@ import { SeoAnalyzer } from '@/services/seo-analyzer'
 import { GeoAnalyzer } from '@/services/geo-analyzer'
 import { AiOptimizer } from '@/services/ai-optimizer'
 import { AdvancedAnalyzer } from '@/services/advanced-analyzer'
+import { cleanupStaleReports } from '@/lib/stale-cleanup'
 
 const crawler = new CrawlerService()
 const seoAnalyzer = new SeoAnalyzer()
 const geoAnalyzer = new GeoAnalyzer()
 const aiOptimizer = new AiOptimizer()
 const advancedAnalyzer = new AdvancedAnalyzer()
+
+// Lazy cleanup on first request
+let cleanupDone = false
+async function ensureCleanup() {
+  if (!cleanupDone) {
+    cleanupDone = true
+    await cleanupStaleReports().catch(() => {})
+  }
+}
 
 /**
  * Background analysis pipeline.
@@ -86,6 +96,8 @@ async function runAnalysis(reportId: string, url: string) {
 }
 
 export async function POST(req: Request) {
+  await ensureCleanup()
+
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return new Response(JSON.stringify({ error: '未登录' }), {

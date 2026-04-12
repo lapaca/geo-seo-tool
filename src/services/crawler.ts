@@ -74,7 +74,19 @@ export class CrawlerService {
       robotsTxt,
       hasSitemap,
       semanticTags: this.detectSemanticTags($),
+      domCounts: this.countDomElements($),
       bodyText: this.extractBodyText($),
+    }
+  }
+
+  private countDomElements($: cheerio.CheerioAPI): CrawlData['domCounts'] {
+    return {
+      iframes: $('iframe').length,
+      forms: $('form').length,
+      cssFiles: $('link[rel="stylesheet"]').length,
+      jsFiles: $('script[src]').length,
+      inlineStyles: $('style').length,
+      inlineScripts: $('script:not([src])').length,
     }
   }
 

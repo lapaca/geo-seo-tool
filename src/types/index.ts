@@ -41,6 +41,16 @@ export interface CrawlData {
     hasFooter: boolean
   }
 
+  // DOM element counts (extracted from raw HTML, not bodyText)
+  domCounts: {
+    iframes: number
+    forms: number
+    cssFiles: number
+    jsFiles: number
+    inlineStyles: number
+    inlineScripts: number
+  }
+
   bodyText: string
 }
 
