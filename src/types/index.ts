@@ -245,8 +245,7 @@ export interface Expert {
   title: string
   bio: string
   specialties: string[]
-  contactType: ContactType
-  contactValue: string
+  // contactType and contactValue are NOT exposed to frontend
   priceMin: number
   priceMax: number
   priceUnit: string
@@ -258,6 +257,23 @@ export interface Expert {
   isActive: boolean
   reviewCount?: number
   createdAt: string
+}
+
+export interface ExpertListResponse {
+  experts: Expert[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+}
+
+export interface ContactRequestInput {
+  userName: string
+  userContact: string
+  userContactType: 'wechat' | 'email' | 'phone' | 'telegram'
+  message?: string
 }
 
 export interface ExpertReview {

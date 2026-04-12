@@ -1,19 +1,32 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/db'
+
+const PAGE_SIZE = 20
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
   const specialty = url.searchParams.get('specialty')
-  const sort = url.searchParams.get('sort') || 'rating' // rating | orders | price_low | price_high
+  const sort = url.searchParams.get('sort') || 'rating'
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10))
+  const skip = (page - 1) * PAGE_SIZE
 
-  const experts = await prisma.expert.findMany({
-    where: { isActive: true },
-    include: { _count: { select: { reviews: true } } },
-    orderBy: sort === 'orders' ? { completedOrders: 'desc' }
-      : sort === 'price_low' ? { priceMin: 'asc' }
-      : sort === 'price_high' ? { priceMax: 'desc' }
-      : { avgRating: 'desc' },
-  })
+  const where = { isActive: true }
+
+  const [experts, total] = await Promise.all([
+    prisma.expert.findMany({
+      where,
+      include: { _count: { select: { reviews: true } } },
+      orderBy: sort === 'orders' ? { completedOrders: 'desc' }
+        : sort === 'price_low' ? { priceMin: 'asc' }
+        : sort === 'price_high' ? { priceMax: 'desc' }
+        : { avgRating: 'desc' },
+      skip,
+      take: PAGE_SIZE,
+    }),
+    prisma.expert.count({ where }),
+  ])
 
   const result = experts
     .map((e) => ({
@@ -23,8 +36,7 @@ export async function GET(req: Request) {
       title: e.title,
       bio: e.bio,
       specialties: JSON.parse(e.specialties) as string[],
-      contactType: e.contactType,
-      contactValue: e.contactValue,
+      // contactType and contactValue are NOT exposed to frontend
       priceMin: e.priceMin,
       priceMax: e.priceMax,
       priceUnit: e.priceUnit,
@@ -42,12 +54,18 @@ export async function GET(req: Request) {
       return e.specialties.some((s) => s.includes(specialty))
     })
 
-  return NextResponse.json(result)
+  return NextResponse.json({
+    experts: result,
+    pagination: {
+      page,
+      pageSize: PAGE_SIZE,
+      total,
+      totalPages: Math.ceil(total / PAGE_SIZE),
+    },
+  })
 }
 
 export async function POST(req: Request) {
-  const { getServerSession } = await import('next-auth')
-  const { authOptions } = await import('@/lib/auth-options')
   const session = await getServerSession(authOptions)
 
   if (!session?.user) {

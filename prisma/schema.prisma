@@ -14,8 +14,9 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  reports   Report[]
-  experts   Expert[]
+  reports         Report[]
+  experts         Expert[]
+  contactRequests ContactRequest[]
 }
 
 model Report {
@@ -69,6 +70,7 @@ model Expert {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   reviews        ExpertReview[]
+  contactRequests ContactRequest[]
 
   @@index([isActive])
   @@index([avgRating])
@@ -85,4 +87,20 @@ model ExpertReview {
   createdAt DateTime @default(now())
 
   @@index([expertId])
+}
+
+model ContactRequest {
+  id           String   @id @default(cuid())
+  expertId     String
+  expert       Expert   @relation(fields: [expertId], references: [id])
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  userName     String   // 用户提交的姓名
+  userContact  String   // 用户提交的联系方式
+  userContactType String // wechat/email/phone/telegram
+  message      String?  // 需求描述
+  createdAt    DateTime @default(now())
+
+  @@index([expertId])
+  @@index([userId])
 }
