@@ -7,7 +7,11 @@ export class AiOptimizer {
 
   constructor() {
     const apiKey = process.env.ANTHROPIC_API_KEY
-    this.client = apiKey ? new Anthropic({ apiKey }) : null
+    const baseURL = process.env.ANTHROPIC_BASE_URL
+    this.client = apiKey ? new Anthropic({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+    }) : null
   }
 
   async analyzeAndOptimize(
@@ -26,7 +30,7 @@ export class AiOptimizer {
     const { system, user } = this.buildPrompt(crawlData, seoIssues, geoRuleIssues)
 
     const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       max_tokens: 4096,
       system,
       messages: [{ role: 'user', content: user }],
@@ -167,7 +171,9 @@ ${issuesList || '(无明显问题)'}
 
     try {
       parsed = JSON.parse(jsonStr)
-    } catch {
+    } catch (e) {
+      console.error('[AiOptimizer] Failed to parse JSON. Raw response:', responseText.slice(0, 500))
+      console.error('[AiOptimizer] Parse error:', e instanceof Error ? e.message : e)
       // Fallback: return empty results
       return { geoAiIssues: [], optimizations: [] }
     }
